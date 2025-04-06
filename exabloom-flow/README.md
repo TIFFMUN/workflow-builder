@@ -1,46 +1,46 @@
-# Getting Started with Create React App
+# Workflow Builder
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+## Overview
 
-## Available Scripts
+This project is a workflow builder using **React** and **React Flow**. Users can create, edit, and delete nodes to build a visual workflow. The workflow starts with a **Start Node** and an **End Node**, and **Action Nodes** can be added in between. Nodes are automatically connected by **PlusNodes**.
 
-In the project directory, you can run:
+## Features
 
-### `npm start`
+- Add, edit, and delete nodes
+- Dynamically updates the layout when nodes are added or deleted
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+## Key Functions
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+**rebuildWithPlusNodes**: rebuilds the entire node and edge layout every time a change occurs (such as adding or deleting a node).
+**handleAdd**: dynamically adds a new Action node between two existing nodes when the plus button is clicked.
+**openModal**: opens the modal to edit the node.
+**handleChangeName**: updates the node’s name as the user types in the modal.
+**handleUpdateName**: saves the changes to the node name and re-renders the layout.
+**handleDeleteNode**: deletes a node and recalculates the layout, ensuring no dangling edges and maintaining the workflow structure.
 
-### `npm test`
+## Assumptions
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+- The layout recalculates only on initial load or when nodes are added, assuming that the window size remains fairly consistent.
+- For a very large number of nodes, more performance optimizations like virtualization may be needed, but this was not required for this assignment.
 
-### `npm run build`
+## Challenges Faced
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+- Ensuring that nodes don’t overlap when added dynamically.
+- Maintaining node connections after node deletion.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## Setup Instructions
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+```bash
+git clone https://github.com/TIFFMUN/workflow-builder.git
+cd workflow-builder
+npm install
+npm start
+```
 
-### `npm run eject`
+**View the project** at `http://localhost:3000`.
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+## Technologies Used
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
-
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
+- **React** (for building the UI)
+- **React Flow** (for managing and visualizing nodes and edges)
+- **JavaScript**/ **TypeScript** (for frontend logic)
