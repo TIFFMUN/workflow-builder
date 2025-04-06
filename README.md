@@ -4,7 +4,7 @@
 
 ### Backend: A Node.js application using Express and PostgreSQL for managing data and executing SQL queries.
 
-### Set Up Details are in README.md for respective folders
+### More Details are in README.md for respective folders
 
 ### Video Link
 
