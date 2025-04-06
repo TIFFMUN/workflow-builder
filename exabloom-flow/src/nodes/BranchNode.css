@@ -1,0 +1,22 @@
+.branch-node {
+  padding: 12px 16px;
+  border: 2px solid #d1d5db;
+  background-color: #f9fafb;
+  border-radius: 12px;
+  text-align: center;
+  font-size: 14px;
+  color: #111827;
+  font-weight: 500;
+  width: 120px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.branch-node .label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.branch-node:hover {
+  background-color: #f3f4f6;
+}
