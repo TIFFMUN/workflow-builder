@@ -1,0 +1,10 @@
+.end-node {
+  padding: 8px 16px;
+  border-radius: 20px;
+  background-color: #f4f4f4;
+  border: 1px solid #ccc;
+  font-weight: bold;
+  font-size: 13px;
+  min-width: 100px;
+  text-align: center;
+}
