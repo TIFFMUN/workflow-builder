@@ -25,11 +25,11 @@ async function loadMessagesFromCSV() {
       })
       .on('end', () => {
         console.log(`✅ Loaded ${messageTemplates.length} messages from CSV`);
-        console.log('Message templates:', messageTemplates);  // Log the populated array of message content
+        console.log('Message templates:', messageTemplates);  
         resolve();
       })
       .on('error', (err) => {
-        console.error('Error reading CSV:', err);  // Handle file read error
+        console.error('Error reading CSV:', err);  
         reject(err);
       });
   });
@@ -51,9 +51,9 @@ function generateUniquePhoneNumber() {
 async function seedContactsData() {
   console.log('🌱 Seeding contacts...');
   for (let i = 0; i < TOTAL_CONTACTS; i++) {
-    const fullName = faker.person.fullName().replace(/'/g, "''");  // Generate and escape name
-    const phoneNumber = generateUniquePhoneNumber().replace(/'/g, "''");  // Generate and escape phone number
-    const createdAtTimestamp = new Date(Date.now() - Math.floor(Math.random() * 31536000000)); // Random past date
+    const fullName = faker.person.fullName().replace(/'/g, "''");
+    const phoneNumber = generateUniquePhoneNumber().replace(/'/g, "''");  
+    const createdAtTimestamp = new Date(Date.now() - Math.floor(Math.random() * 31536000000));
     
     // Insert contact into the contacts table, setting both created_at and updated_at
     await db.query(
@@ -67,9 +67,8 @@ async function seedContactsData() {
 // Seed messages table with fake data for each contact
 async function seedMessagesData() {
   console.log('💬 Seeding messages...');
-  const { rows } = await db.query('SELECT id FROM contacts');  // Fetch all contact ids
-  const contactIds = rows.map(row => row.id);  // Extract contact ids
-
+  const { rows } = await db.query('SELECT id FROM contacts');  
+  const contactIds = rows.map(row => row.id);  
   for (let i = 0; i < TOTAL_MESSAGES; i += BATCH_SIZE) {
     const values = [];
     const params = [];
@@ -98,9 +97,9 @@ async function seedMessagesData() {
 // Main function 
 async function main() {
   try {
-    await loadMessagesFromCSV();  // Load messages from CSV file
-    await seedContactsData();  // Seed contacts table
-    await seedMessagesData();  // Seed messages table
+    await loadMessagesFromCSV();  
+    await seedContactsData(); 
+    await seedMessagesData();
     console.log('🎉 Seeding complete!');
   } catch (error) {
     console.error('Error during seeding:', error);
