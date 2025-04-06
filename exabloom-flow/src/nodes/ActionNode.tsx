@@ -14,8 +14,9 @@ const ActionNode: React.FC<ActionNodeProps> = ({ data }) => {
       <Handle type="target" position={Position.Top} />
       <div className="action-node-content">
         <img
-          src="https://cdn-icons-png.flaticon.com/512/847/847969.png"
+          src="https://icons.veryicon.com/png/o/miscellaneous/shepherd/clipboard-55.png"
           alt="action"
+          className="clipboard"
         />
         <strong>{data.label}</strong> {/* Dynamically displaying the name */}
       </div>

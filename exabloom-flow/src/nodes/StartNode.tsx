@@ -13,12 +13,9 @@ const StartNode: React.FC<StartNodeProps> = ({ data }) => {
     <div className="start-node">
       <Handle type="source" position={Position.Bottom} />
       <div className="start-node-content">
-        <img
-          src="https://cdn-icons-png.flaticon.com/512/10339/10339656.png"
-          alt="start"
-        />
+        <img src="https://www.svgrepo.com/show/106364/chat.svg" alt="start" />
         <div>
-          <strong>{data.label}</strong> {/* Dynamically displaying the name */}
+          <strong>{data.label}</strong>
           <div className="subtext">Start</div>
         </div>
       </div>

@@ -10,11 +10,13 @@ import ReactFlow, {
 import "reactflow/dist/style.css";
 import "./App.css";
 
+// Custom node components
 import ActionNode from "./nodes/ActionNode";
 import EndNode from "./nodes/EndNode";
 import StartNode from "./nodes/StartNode";
 import PlusNode from "./nodes/PlusNode";
 
+// Register node types
 const nodeTypes = {
   actionNode: ActionNode,
   endNode: EndNode,
@@ -31,14 +33,14 @@ const App = () => {
 
   const spacing = 50;
 
-  // Initialize Start and End node
+  // Initialize the graph with just Start and End nodes
   useEffect(() => {
     const initialNodes = [
       {
-        id: "start",
+        id: "Start",
         type: "startNode",
         position: { x: (window.innerWidth - 140) / 2, y: 20 },
-        data: { label: "Start" },
+        data: { label: "Start Node" },
       },
       {
         id: "end",
@@ -50,11 +52,12 @@ const App = () => {
     rebuildWithPlusNodes(initialNodes);
   }, []);
 
+  // Rebuild nodes and edges, inserting Plus nodes between each pair
   const rebuildWithPlusNodes = (rawNodes: Node[]) => {
     const resultNodes: Node[] = [];
     const resultEdges: Edge[] = [];
 
-    const contentNodes = [...rawNodes.filter((n) => n.type !== "plusNode")];
+    const contentNodes = rawNodes.filter((n) => n.type !== "plusNode");
 
     for (let i = 0; i < contentNodes.length; i++) {
       const node = {
@@ -97,7 +100,6 @@ const App = () => {
     setEdges(resultEdges);
   };
 
-  // Handle Change in Action Node Name
   const handleChangeName = (e: React.ChangeEvent<HTMLInputElement>) => {
     setActionNodeName(e.target.value);
   };
@@ -111,12 +113,11 @@ const App = () => {
       );
       setNodes(updatedNodes);
       setShowModal(false);
-      setActionNodeName(""); // Clear input field
+      setActionNodeName("");
       setEditingNodeId(null);
     }
   };
 
-  // Handle Node Deletion
   const handleDeleteNode = (nodeId: string) => {
     const filtered = nodes.filter(
       (node) => node.id !== nodeId && node.type !== "plusNode"
@@ -125,7 +126,6 @@ const App = () => {
     setShowModal(false);
   };
 
-  // Open modal on node click
   const openModal = (nodeId: string) => {
     setEditingNodeId(nodeId);
     const node = nodes.find((n) => n.id === nodeId);
@@ -141,6 +141,7 @@ const App = () => {
     }
   };
 
+  // Listen for custom event to insert new Action Node between two nodes
   useEffect(() => {
     const handleAdd = (e: any) => {
       const { parentId, nextId } = e.detail;
@@ -154,7 +155,7 @@ const App = () => {
       const newAction: Node = {
         id: newActionId,
         type: "actionNode",
-        position: { x: 250, y: 0 },
+        position: { x: 250, y: 0 }, // Will be auto-adjusted anyway
         data: { label: "Action Node" },
       };
 
@@ -176,14 +177,14 @@ const App = () => {
           edges={edges}
           nodeTypes={nodeTypes}
           defaultViewport={{ x: 20, y: 0, zoom: 1 }}
-          onNodeClick={handleNodeClick} // Handle click on Action Node to open modal
+          onNodeClick={handleNodeClick}
         >
           <MiniMap />
           <Controls />
           <Background />
         </ReactFlow>
 
-        {/* Modal for editing Action Node */}
+        {/* Side modal for editing Action Node */}
         {showModal && (
           <div className="side-panel-overlay">
             <div className="side-panel">
