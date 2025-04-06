@@ -16,6 +16,7 @@ import EndNode from "./nodes/EndNode";
 import StartNode from "./nodes/StartNode";
 import PlusNode from "./nodes/PlusNode";
 import IfElseNode from "./nodes/IfElseNode";
+import BranchNode from "./nodes/BranchNode";
 
 const nodeTypes = {
   actionNode: ActionNode,
@@ -23,6 +24,7 @@ const nodeTypes = {
   startNode: StartNode,
   plusNode: PlusNode,
   ifElseNode: IfElseNode,
+  BranchNode: BranchNode,
 };
 
 const App = () => {
@@ -106,25 +108,118 @@ const App = () => {
     if (!currentParentId || !plusNodePosition) return;
 
     const newNodeId = `${nodeType}-${Date.now()}`;
-    const newNode: Node = {
-      id: newNodeId,
-      type: nodeType,
-      position: { x: plusNodePosition.x, y: plusNodePosition.y + spacing * 2 },
-      data: {
-        label: nodeType === "actionNode" ? "Action Node" : "If/Else Node",
-      },
-    };
-
     const filteredNodes = nodes.filter((n) => n.type !== "plusNode");
     const parentIndex = filteredNodes.findIndex(
       (n) => n.id === currentParentId
     );
+    if (parentIndex === -1) return;
 
-    if (parentIndex !== -1) {
-      filteredNodes.splice(parentIndex + 1, 0, newNode);
+    // === CASE 1: ACTION NODE ===
+    if (nodeType === "actionNode") {
+      const newActionNode: Node = {
+        id: newNodeId,
+        type: "actionNode",
+        position: {
+          x: plusNodePosition.x,
+          y: plusNodePosition.y + spacing * 2,
+        },
+        data: { label: "Action Node" },
+      };
+
+      filteredNodes.splice(parentIndex + 1, 0, newActionNode);
       rebuildWithPlusNodes(filteredNodes);
     }
 
+    // === CASE 2: IF / ELSE NODE + 3 BRANCHES ===
+    else if (nodeType === "ifElseNode") {
+      const ifElseNode: Node = {
+        id: newNodeId,
+        type: "ifElseNode",
+        position: {
+          x: plusNodePosition.x,
+          y: plusNodePosition.y + spacing * 2,
+        },
+        data: { label: "If / Else" },
+      };
+
+      const branchYOffset = spacing * 5;
+      const branchXOffset = 200;
+      const endYOffset = spacing * 3;
+
+      const baseX = plusNodePosition.x;
+      const baseY = plusNodePosition.y + spacing * 2;
+
+      // Branches
+      const branches: Node[] = [
+        {
+          id: `${newNodeId}-branch1`,
+          type: "branchNode",
+          position: { x: baseX - branchXOffset, y: baseY + branchYOffset },
+          data: { label: "Branch #1" },
+        },
+        {
+          id: `${newNodeId}-branch2`,
+          type: "branchNode",
+          position: { x: baseX, y: baseY + branchYOffset },
+          data: { label: "Branch #2" },
+        },
+        {
+          id: `${newNodeId}-else`,
+          type: "branchNode",
+          position: { x: baseX + branchXOffset, y: baseY + branchYOffset },
+          data: { label: "Else" },
+        },
+      ];
+
+      // End nodes (1 for each branch)
+      const ends: Node[] = branches.map((branch, idx) => ({
+        id: `${branch.id}-end`,
+        type: "endNode",
+        position: {
+          x: branch.position.x,
+          y: branch.position.y + endYOffset,
+        },
+        data: { label: "End" },
+      }));
+
+      // Edges from IfElse to each branch
+      const edgesFromIfElse: Edge[] = branches.map((branch) => ({
+        id: `e-${newNodeId}-${branch.id}`,
+        source: newNodeId,
+        target: branch.id,
+        type: "smoothstep",
+      }));
+
+      // Edges from branches to end
+      const edgesToEnd: Edge[] = branches.map((branch) => ({
+        id: `e-${branch.id}-end`,
+        source: branch.id,
+        target: `${branch.id}-end`,
+        type: "straight",
+      }));
+
+      // Edge from parent to IfElse
+      const edgeFromParent: Edge = {
+        id: `e-${currentParentId}-${newNodeId}`,
+        source: currentParentId,
+        target: newNodeId,
+        type: "straight",
+      };
+
+      // Final node + edge list
+      const newNodes = filteredNodes.filter((node) => node.type !== "endNode");
+      newNodes.splice(parentIndex + 1, 0, ifElseNode, ...branches, ...ends);
+
+      setNodes(newNodes);
+      setEdges((prev) => [
+        ...prev,
+        edgeFromParent,
+        ...edgesFromIfElse,
+        ...edgesToEnd,
+      ]);
+    }
+
+    // === RESET STATE ===
     setShowAddNodeOptions(false);
     setCurrentParentId(null);
     setPlusNodePosition(null);
