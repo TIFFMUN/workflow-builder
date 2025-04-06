@@ -1,3 +1,4 @@
+// App.tsx
 import React, { useEffect, useState } from "react";
 import ReactFlow, {
   Background,
@@ -14,12 +15,14 @@ import ActionNode from "./nodes/ActionNode";
 import EndNode from "./nodes/EndNode";
 import StartNode from "./nodes/StartNode";
 import PlusNode from "./nodes/PlusNode";
+import IfElseNode from "./nodes/IfElseNode";
 
 const nodeTypes = {
   actionNode: ActionNode,
   endNode: EndNode,
   startNode: StartNode,
   plusNode: PlusNode,
+  ifElseNode: IfElseNode,
 };
 
 const App = () => {
@@ -28,10 +31,15 @@ const App = () => {
   const [actionNodeName, setActionNodeName] = useState<string>("");
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [showAddNodeOptions, setShowAddNodeOptions] = useState(false);
+  const [plusNodePosition, setPlusNodePosition] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const [currentParentId, setCurrentParentId] = useState<string | null>(null);
 
   const spacing = 50;
 
-  // Initialize Start and End node
   useEffect(() => {
     const initialNodes = [
       {
@@ -54,7 +62,7 @@ const App = () => {
     const resultNodes: Node[] = [];
     const resultEdges: Edge[] = [];
 
-    const contentNodes = [...rawNodes.filter((n) => n.type !== "plusNode")];
+    const contentNodes = rawNodes.filter((n) => n.type !== "plusNode");
 
     for (let i = 0; i < contentNodes.length; i++) {
       const node = {
@@ -64,6 +72,7 @@ const App = () => {
           y: i * spacing * 2 + 60,
         },
         data: {
+          ...contentNodes[i].data,
           label: contentNodes[i].data?.label || "Action Node",
         },
       };
@@ -73,17 +82,13 @@ const App = () => {
         const next = contentNodes[i + 1];
         const plusId = `plus-${node.id}-${next.id}`;
 
-        const plusNode: Node = {
+        resultNodes.push({
           id: plusId,
           type: "plusNode",
-          position: {
-            x: node.position.x,
-            y: node.position.y + spacing,
-          },
+          position: { x: node.position.x, y: node.position.y + spacing },
           data: { parentId: node.id, nextId: next.id },
-        };
+        });
 
-        resultNodes.push(plusNode);
         resultEdges.push({
           id: `e-${node.id}-${next.id}`,
           source: node.id,
@@ -97,75 +102,77 @@ const App = () => {
     setEdges(resultEdges);
   };
 
-  // Handle Change in Action Node Name
-  const handleChangeName = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setActionNodeName(e.target.value);
+  const handleNodeSelection = (nodeType: "actionNode" | "ifElseNode") => {
+    if (!currentParentId || !plusNodePosition) return;
+
+    const newNodeId = `${nodeType}-${Date.now()}`;
+    const newNode: Node = {
+      id: newNodeId,
+      type: nodeType,
+      position: { x: plusNodePosition.x, y: plusNodePosition.y + spacing * 2 },
+      data: {
+        label: nodeType === "actionNode" ? "Action Node" : "If/Else Node",
+      },
+    };
+
+    const filteredNodes = nodes.filter((n) => n.type !== "plusNode");
+    const parentIndex = filteredNodes.findIndex(
+      (n) => n.id === currentParentId
+    );
+
+    if (parentIndex !== -1) {
+      filteredNodes.splice(parentIndex + 1, 0, newNode);
+      rebuildWithPlusNodes(filteredNodes);
+    }
+
+    setShowAddNodeOptions(false);
+    setCurrentParentId(null);
+    setPlusNodePosition(null);
+  };
+
+  const handleNodeClick = (_: any, node: Node) => {
+    if (node.type === "actionNode") {
+      setEditingNodeId(node.id);
+      setActionNodeName(node.data.label);
+      setShowModal(true);
+    }
   };
 
   const handleUpdateName = () => {
     if (editingNodeId) {
       const updatedNodes = nodes.map((node) =>
         node.id === editingNodeId
-          ? { ...node, data: { label: actionNodeName } }
+          ? { ...node, data: { ...node.data, label: actionNodeName } }
           : node
       );
       setNodes(updatedNodes);
       setShowModal(false);
-      setActionNodeName(""); // Clear input field
       setEditingNodeId(null);
+      setActionNodeName("");
     }
   };
 
-  // Handle Node Deletion
-  const handleDeleteNode = (nodeId: string) => {
-    const filtered = nodes.filter(
-      (node) => node.id !== nodeId && node.type !== "plusNode"
-    );
-    rebuildWithPlusNodes(filtered);
+  const handleDeleteNode = (id: string) => {
+    const updated = nodes.filter((n) => n.id !== id && n.type !== "plusNode");
+    rebuildWithPlusNodes(updated);
     setShowModal(false);
   };
 
-  // Open modal on node click
-  const openModal = (nodeId: string) => {
-    setEditingNodeId(nodeId);
-    const node = nodes.find((n) => n.id === nodeId);
-    if (node) {
-      setActionNodeName(node.data.label);
-    }
-    setShowModal(true);
-  };
-
-  const handleNodeClick = (event: any, node: Node) => {
-    if (node.type === "actionNode") {
-      openModal(node.id);
-    }
-  };
-
   useEffect(() => {
-    const handleAdd = (e: any) => {
+    const handler = (e: any) => {
       const { parentId, nextId } = e.detail;
-      const currentNodes = nodes.filter((n) => n.type !== "plusNode");
-
-      const parentIndex = currentNodes.findIndex((n) => n.id === parentId);
-      const nextIndex = currentNodes.findIndex((n) => n.id === nextId);
-      if (parentIndex === -1 || nextIndex === -1) return;
-
-      const newActionId = `action-${Date.now()}`;
-      const newAction: Node = {
-        id: newActionId,
-        type: "actionNode",
-        position: { x: 250, y: 0 },
-        data: { label: "Action Node" },
-      };
-
-      const updated = [...currentNodes];
-      updated.splice(parentIndex + 1, 0, newAction);
-
-      rebuildWithPlusNodes(updated);
+      const plusNode = nodes.find(
+        (n) => n.data?.parentId === parentId && n.data?.nextId === nextId
+      );
+      if (plusNode) {
+        setCurrentParentId(parentId);
+        setPlusNodePosition({ x: plusNode.position.x, y: plusNode.position.y });
+        setShowAddNodeOptions(true);
+      }
     };
 
-    window.addEventListener("add-node", handleAdd);
-    return () => window.removeEventListener("add-node", handleAdd);
+    window.addEventListener("plus-node-clicked", handler);
+    return () => window.removeEventListener("plus-node-clicked", handler);
   }, [nodes]);
 
   return (
@@ -175,21 +182,21 @@ const App = () => {
           nodes={nodes}
           edges={edges}
           nodeTypes={nodeTypes}
-          defaultViewport={{ x: 20, y: 0, zoom: 1 }}
-          onNodeClick={handleNodeClick} // Handle click on Action Node to open modal
+          onNodeClick={handleNodeClick}
+          defaultViewport={{ x: 0, y: 0, zoom: 1 }}
         >
           <MiniMap />
           <Controls />
           <Background />
         </ReactFlow>
 
-        {/* Modal for editing Action Node */}
+        {/* === Modal for Edit/Delete === */}
         {showModal && (
           <div className="side-panel-overlay">
             <div className="side-panel">
               <div className="side-panel-header">
-                <h2>Action</h2>
-                <p>Edit the action node</p>
+                <h2>Edit Action</h2>
+                <p>Modify or remove this action node</p>
                 <button
                   className="close-btn"
                   onClick={() => setShowModal(false)}
@@ -197,24 +204,19 @@ const App = () => {
                   ×
                 </button>
               </div>
-
               <div className="side-panel-body">
                 <label>Action Name</label>
                 <input
                   type="text"
                   value={actionNodeName}
-                  onChange={handleChangeName}
-                  placeholder="Enter action name"
+                  onChange={(e) => setActionNodeName(e.target.value)}
+                  placeholder="Enter name"
                 />
-                {/* Optional future section:
-        <div className="add-field">+ Add field</div>
-        */}
               </div>
-
               <div className="side-panel-footer">
                 <button
                   className="delete"
-                  onClick={() => handleDeleteNode(editingNodeId || "")}
+                  onClick={() => handleDeleteNode(editingNodeId!)}
                 >
                   Delete
                 </button>
@@ -227,6 +229,46 @@ const App = () => {
                   </button>
                   <button className="save" onClick={handleUpdateName}>
                     Save
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* === Modal for choosing Action or If/Else === */}
+        {showAddNodeOptions && (
+          <div className="side-panel-overlay">
+            <div className="side-panel">
+              <div className="side-panel-header">
+                <h2>Add Node</h2>
+                <p>Select the type of node to insert</p>
+                <button
+                  className="close-btn"
+                  onClick={() => setShowAddNodeOptions(false)}
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="side-panel-body">
+                <div className="add-node-button-group">
+                  <button onClick={() => handleNodeSelection("actionNode")}>
+                    Add Action Node
+                  </button>
+                  <button onClick={() => handleNodeSelection("ifElseNode")}>
+                    Add If/Else Node
+                  </button>
+                </div>
+              </div>
+
+              <div className="side-panel-footer">
+                <div className="right-buttons">
+                  <button
+                    className="cancel"
+                    onClick={() => setShowAddNodeOptions(false)}
+                  >
+                    Cancel
                   </button>
                 </div>
               </div>

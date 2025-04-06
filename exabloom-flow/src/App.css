@@ -1,6 +1,3 @@
-/* /* ========================= */
-/* Add Button (Plus Button) */
-/* ========================= */
 .add-button {
   position: absolute;
   top: 190px;
@@ -21,9 +18,32 @@
   background-color: #ddd;
 }
 
-/* ========================= */
-/* Side Panel (Right Drawer) */
-/* ========================= */
+/* Add Node Options Modal */
+.add-node-options {
+  background: white;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  padding: 10px;
+  border-radius: 8px;
+  z-index: 1001;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.add-node-options button {
+  padding: 10px;
+  border: none;
+  background-color: #4caf50;
+  color: white;
+  cursor: pointer;
+  border-radius: 5px;
+}
+
+.add-node-options button:hover {
+  background-color: #45a049;
+}
+
+/* Side Panel Styles */
 .side-panel-overlay {
   position: fixed;
   top: 0;
@@ -48,7 +68,6 @@
   overflow: hidden;
 }
 
-/* Slide in from right */
 @keyframes slideInRight {
   from {
     transform: translateX(100%);
@@ -170,4 +189,37 @@
 
 .side-panel-footer .save:hover {
   background-color: #4f46e5;
+}
+
+/* .add-node-options {
+  background: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  padding: 12px;
+  border-radius: 8px;
+  z-index: 1002;
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+
+.add-node-options button:hover {
+  background-color: #4f46e5;
+} */
+
+.add-node-button-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 8px 12px;
+}
+
+.add-node-button-group button {
+  padding: 8px 12px;
+  border: none;
+  background-color: #6366f1;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
 }
