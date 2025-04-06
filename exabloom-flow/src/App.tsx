@@ -206,9 +206,6 @@ const App = () => {
                   onChange={handleChangeName}
                   placeholder="Enter action name"
                 />
-                {/* Optional future section:
-        <div className="add-field">+ Add field</div>
-        */}
               </div>
 
               <div className="side-panel-footer">
