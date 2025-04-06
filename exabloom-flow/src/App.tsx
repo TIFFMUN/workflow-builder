@@ -43,61 +43,177 @@ const App = () => {
   const spacing = 50;
 
   useEffect(() => {
-    const initialNodes = [
+    const initialNodes: Node[] = [
       {
         id: "start",
         type: "startNode",
         position: { x: (window.innerWidth - 140) / 2, y: 20 },
         data: { label: "Start" },
       },
-      {
-        id: "end",
-        type: "endNode",
-        position: { x: window.innerWidth / 2, y: 100 },
-        data: { label: "End" },
-      },
     ];
-    rebuildWithPlusNodes(initialNodes);
+    rebuildWithPlusNodes(initialNodes, []);
   }, []);
 
-  const rebuildWithPlusNodes = (rawNodes: Node[]) => {
+  const removeChildEndAndPlusNodes = (
+    nodes: Node[],
+    edges: Edge[],
+    parentId: string
+  ) => {
+    // Find End nodes directly connected to parent
+    const connectedEndEdges = edges.filter(
+      (e) => e.source === parentId && e.target.endsWith("-end")
+    );
+    const connectedEndIds = connectedEndEdges.map((e) => e.target);
+
+    // Remove:
+    // 1. End nodes that are children of this node
+    // 2. PlusNodes associated with those connections
+    const cleanedNodes = nodes.filter(
+      (n) =>
+        !connectedEndIds.includes(n.id) &&
+        !(n.type === "plusNode" && n.data?.parentId === parentId)
+    );
+
+    // Remove:
+    // 1. Edges to those End nodes
+    // 2. Edges to or from PlusNodes between parent and End
+    const cleanedEdges = edges.filter(
+      (e) =>
+        e.source !== parentId ||
+        (!connectedEndIds.includes(e.target) &&
+          !e.id.includes(`plus-${parentId}`))
+    );
+
+    return { cleanedNodes, cleanedEdges };
+  };
+
+  const rebuildWithPlusNodes = (rawNodes: Node[], rawEdges: Edge[] = []) => {
     const resultNodes: Node[] = [];
     const resultEdges: Edge[] = [];
 
-    const contentNodes = rawNodes.filter((n) => n.type !== "plusNode");
+    const contentNodes = rawNodes.filter(
+      (n) => n.type !== "plusNode" && n.type !== "endNode"
+    );
 
-    for (let i = 0; i < contentNodes.length; i++) {
-      const node = {
-        ...contentNodes[i],
+    const getNextTarget = (sourceId: string) =>
+      rawEdges.find((e) => e.source === sourceId)?.target;
+
+    const addPlusBetween = (
+      source: string,
+      target: string,
+      sourcePos: any,
+      targetPos: any
+    ) => {
+      const plusId = `plus-${source}-${target}`;
+      const plusNode: Node = {
+        id: plusId,
+        type: "plusNode",
         position: {
-          x: (window.innerWidth - 210) / 2,
-          y: i * spacing * 2 + 60,
+          x: (sourcePos.x + targetPos.x) / 2,
+          y: (sourcePos.y + targetPos.y) / 2,
         },
-        data: {
-          ...contentNodes[i].data,
-          label: contentNodes[i].data?.label || "Action Node",
-        },
+        data: { parentId: source, nextId: target },
       };
-      resultNodes.push(node);
-
-      if (i < contentNodes.length - 1) {
-        const next = contentNodes[i + 1];
-        const plusId = `plus-${node.id}-${next.id}`;
-
-        resultNodes.push({
-          id: plusId,
-          type: "plusNode",
-          position: { x: node.position.x, y: node.position.y + spacing },
-          data: { parentId: node.id, nextId: next.id },
-        });
-
-        resultEdges.push({
-          id: `e-${node.id}-${next.id}`,
-          source: node.id,
-          target: next.id,
+      resultNodes.push(plusNode);
+      resultEdges.push(
+        {
+          id: `e-${source}-${plusId}`,
+          source,
+          target: plusId,
           type: "straight",
-        });
+        },
+        {
+          id: `e-${plusId}-${target}`,
+          source: plusId,
+          target,
+          type: "straight",
+        },
+        {
+          id: `dashed-${source}-${target}`,
+          source,
+          target,
+          type: "straight",
+          style: {
+            stroke: "#999",
+            strokeDasharray: "5,5",
+          },
+        }
+      );
+    };
+
+    for (const node of contentNodes) {
+      resultNodes.push(node);
+    }
+
+    for (const edge of rawEdges) {
+      const sourceNode = contentNodes.find((n) => n.id === edge.source);
+      const targetNode = contentNodes.find((n) => n.id === edge.target);
+
+      const isIfElseToBranch =
+        sourceNode?.type === "ifElseNode" && targetNode?.type === "branchNode";
+
+      if (isIfElseToBranch) {
+        resultEdges.push(edge); // Keep IfElse → Branch edges
+        continue;
       }
+
+      // if (
+      //   sourceNode &&
+      //   targetNode &&
+      //   !(
+      //     sourceNode.type === "actionNode" &&
+      //     targetNode.id.startsWith("end-") &&
+      //     !targetNode.id.includes(sourceNode.id)
+      //   )
+      // )
+      if (sourceNode && targetNode) {
+        addPlusBetween(
+          edge.source,
+          edge.target,
+          sourceNode.position,
+          targetNode.position
+        );
+      }
+    }
+
+    const branchNodes = contentNodes.filter((n) => n.type === "branchNode");
+    for (const branch of branchNodes) {
+      const endId = `${branch.id}-end`;
+      const endNode: Node = {
+        id: endId,
+        type: "endNode",
+        position: { x: branch.position.x, y: branch.position.y + spacing * 2 },
+        data: { label: "End" },
+      };
+      resultNodes.push(endNode);
+      addPlusBetween(branch.id, endId, branch.position, endNode.position);
+    }
+
+    const lastLinear = [...contentNodes]
+      .reverse()
+      .find(
+        (n) =>
+          ["startNode", "actionNode"].includes(n.type || "") &&
+          !rawEdges.some((e) => e.source === n.id)
+      );
+    if (lastLinear && lastLinear.type !== "ifElseNode") {
+      const endId = `end-${lastLinear.id}`;
+      const endNode: Node = {
+        id: endId,
+        type: "endNode",
+        position: {
+          x: lastLinear.position.x,
+          y: lastLinear.position.y + spacing * 2,
+        },
+        data: { label: "End" },
+      };
+      resultNodes.push(endNode);
+      addPlusBetween(
+        lastLinear.id,
+        endId,
+        lastLinear.position,
+        endNode.position
+      );
     }
 
     setNodes(resultNodes);
@@ -108,14 +224,22 @@ const App = () => {
     if (!currentParentId || !plusNodePosition) return;
 
     const newNodeId = `${nodeType}-${Date.now()}`;
-    const filteredNodes = nodes.filter((n) => n.type !== "plusNode");
+    const filteredNodes = nodes.filter(
+      (n) => n.type !== "plusNode" && n.type !== "endNode"
+    );
     const parentIndex = filteredNodes.findIndex(
       (n) => n.id === currentParentId
     );
     if (parentIndex === -1) return;
 
-    // === CASE 1: ACTION NODE ===
+    //   rebuildWithPlusNodes([...filteredNodes, newActionNode], updatedEdges);
     if (nodeType === "actionNode") {
+      const branchEndId = `${currentParentId}-end`;
+
+      // Detect if current parent connects to any EndNode
+      const { cleanedNodes: updatedNodes, cleanedEdges: updatedEdges } =
+        removeChildEndAndPlusNodes(nodes, edges, currentParentId);
+
       const newActionNode: Node = {
         id: newNodeId,
         type: "actionNode",
@@ -126,12 +250,57 @@ const App = () => {
         data: { label: "Action Node" },
       };
 
-      filteredNodes.splice(parentIndex + 1, 0, newActionNode);
-      rebuildWithPlusNodes(filteredNodes);
-    }
+      const newEndId = `end-${newNodeId}`;
+      const newEndNode: Node = {
+        id: newEndId,
+        type: "endNode",
+        position: {
+          x: newActionNode.position.x,
+          y: newActionNode.position.y + spacing * 2,
+        },
+        data: { label: "End" },
+      };
 
-    // === CASE 2: IF / ELSE NODE + 3 BRANCHES ===
-    else if (nodeType === "ifElseNode") {
+      const edgeToAction: Edge = {
+        id: `e-${currentParentId}-${newNodeId}`,
+        source: currentParentId,
+        target: newNodeId,
+        type: "straight",
+      };
+
+      const edgeToEnd: Edge = {
+        id: `e-${newNodeId}-${newEndId}`,
+        source: newNodeId,
+        target: newEndId,
+        type: "straight",
+      };
+
+      rebuildWithPlusNodes(
+        [...updatedNodes, newActionNode, newEndNode],
+        [...updatedEdges, edgeToAction, edgeToEnd]
+      );
+    } else if (nodeType === "ifElseNode") {
+      const branchEndId = `${currentParentId}-end`;
+
+      // Remove any lingering End node and its edges from currentParentId
+      const connectedEndEdges = edges.filter(
+        (e) => e.source === currentParentId && e.target.endsWith("-end")
+      );
+      const connectedEndIds = connectedEndEdges.map((e) => e.target);
+
+      const updatedEdges = edges.filter(
+        (e) =>
+          e.source !== currentParentId ||
+          (!connectedEndIds.includes(e.target) &&
+            !e.id.includes(`plus-${currentParentId}`))
+      );
+
+      const updatedNodes = filteredNodes.filter(
+        (n) =>
+          !connectedEndIds.includes(n.id) &&
+          !(n.type === "plusNode" && n.data?.parentId === currentParentId)
+      );
+
       const ifElseNode: Node = {
         id: newNodeId,
         type: "ifElseNode",
@@ -149,7 +318,6 @@ const App = () => {
       const baseX = plusNodePosition.x;
       const baseY = plusNodePosition.y + spacing * 2;
 
-      // Branches
       const branches: Node[] = [
         {
           id: `${newNodeId}-branch1`,
@@ -171,8 +339,7 @@ const App = () => {
         },
       ];
 
-      // End nodes (1 for each branch)
-      const ends: Node[] = branches.map((branch, idx) => ({
+      const ends: Node[] = branches.map((branch) => ({
         id: `${branch.id}-end`,
         type: "endNode",
         position: {
@@ -182,7 +349,6 @@ const App = () => {
         data: { label: "End" },
       }));
 
-      // Edges from IfElse to each branch
       const edgesFromIfElse: Edge[] = branches.map((branch) => ({
         id: `e-${newNodeId}-${branch.id}`,
         source: newNodeId,
@@ -190,7 +356,6 @@ const App = () => {
         type: "smoothstep",
       }));
 
-      // Edges from branches to end
       const edgesToEnd: Edge[] = branches.map((branch) => ({
         id: `e-${branch.id}-end`,
         source: branch.id,
@@ -198,7 +363,6 @@ const App = () => {
         type: "straight",
       }));
 
-      // Edge from parent to IfElse
       const edgeFromParent: Edge = {
         id: `e-${currentParentId}-${newNodeId}`,
         source: currentParentId,
@@ -206,20 +370,17 @@ const App = () => {
         type: "straight",
       };
 
-      // Final node + edge list
-      const newNodes = filteredNodes.filter((node) => node.type !== "endNode");
+      const newNodes = updatedNodes.filter((node) => node.type !== "endNode");
       newNodes.splice(parentIndex + 1, 0, ifElseNode, ...branches, ...ends);
 
-      setNodes(newNodes);
-      setEdges((prev) => [
-        ...prev,
+      rebuildWithPlusNodes(newNodes, [
+        ...updatedEdges,
         edgeFromParent,
         ...edgesFromIfElse,
         ...edgesToEnd,
       ]);
     }
 
-    // === RESET STATE ===
     setShowAddNodeOptions(false);
     setCurrentParentId(null);
     setPlusNodePosition(null);
@@ -240,7 +401,7 @@ const App = () => {
           ? { ...node, data: { ...node.data, label: actionNodeName } }
           : node
       );
-      setNodes(updatedNodes);
+      rebuildWithPlusNodes(updatedNodes, edges);
       setShowModal(false);
       setEditingNodeId(null);
       setActionNodeName("");
@@ -249,7 +410,10 @@ const App = () => {
 
   const handleDeleteNode = (id: string) => {
     const updated = nodes.filter((n) => n.id !== id && n.type !== "plusNode");
-    rebuildWithPlusNodes(updated);
+    rebuildWithPlusNodes(
+      updated,
+      edges.filter((e) => e.source !== id && e.target !== id)
+    );
     setShowModal(false);
   };
 
